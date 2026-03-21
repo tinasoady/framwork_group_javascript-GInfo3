@@ -1,4 +1,4 @@
-# framwork_group_javascript-GInfo3
+# framwork_group_javascript-GInfo L3
 Groupe en JS framwork étudiants GinfoL3
 
 1- TINASOADY Judès Edinand          ||  14ISST25-2137FGCI/GInfo
