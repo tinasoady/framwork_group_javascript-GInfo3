@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 
 function App() {
   // 1. État pour la liste des tâches
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem('taskflow_v1');
-    return savedTasks ? JSON.parse(savedTasks) : [];
+  const [tasks, setTasks] = useState(() => { 
+    const savedTasks = localStorage.getItem('taskflow_v1'); 
+    return savedTasks ? JSON.parse(savedTasks) : []; 
   });
 
   // 2. État pour le formulaire (on regroupe tout ici) initialisé avec des valeurs par défaut
@@ -27,12 +27,12 @@ useEffect(() => {
   // Fonction pour ajouter une tâche
   const addTask = (e) => {
     e.preventDefault(); // Empêche le rechargement de la page
-    if (!formData.text.trim()) return;
+    if (!formData.text.trim()) return;  // Ne pas ajouter de tâche vide
 
     const newTask = {
       id: Date.now(),
-      ...formData,
-      completed: false
+      ...formData, // On utilise la syntaxe de décomposition pour inclure tous les champs du formulaire
+      completed: false // Par défaut, une nouvelle tâche n'est pas terminée
     };
 
     setTasks([...tasks, newTask]);
@@ -42,9 +42,9 @@ useEffect(() => {
   };
 
   //resaka recherche et filtres
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(''); // Texte de recherche saisi par l'utilisateur
 const [filter, setFilter] = useState('Toutes'); // 'Toutes', 'En cours', 'Terminées'
-const [categoryFilter, setCategoryFilter] = useState('Toutes');
+const [categoryFilter, setCategoryFilter] = useState('Toutes'); // 'Toutes', 'Travail', 'Personnel', 'Études'
 
 // On applique les filtres et la recherche avant d'afficher les tâches
 // On vérifie pour chaque tâche si elle correspond à la recherche, au filtre d'état et au filtre de catégorie
@@ -57,17 +57,19 @@ const [categoryFilter, setCategoryFilter] = useState('Toutes');
 //Comme ton interface utilise filteredTasks.map, elle se met à jour instantanément pour n'afficher que les tâches qui correspondent.
 
 const filteredTasks = tasks.filter(task => {
-  const matchesSearch = task.text.toLowerCase().includes(search.toLowerCase());
+  const matchesSearch = task.text.toLowerCase().includes(search.toLowerCase()); // Vérifie si le texte de la tâche contient le texte de recherche (insensible à la casse)
   const matchesStatus = 
     filter === 'Toutes' ? true : 
-    filter === 'Terminées' ? task.completed : !task.completed;
+    filter === 'Terminées' ? task.completed : !task.completed; // Vérifie si la tâche correspond au filtre d'état
   const matchesCategory = 
-    categoryFilter === 'Toutes' ? true : task.category === categoryFilter;
+    categoryFilter === 'Toutes' ? true : task.category === categoryFilter; // Vérifie si la tâche correspond au filtre de catégorie
 
-  return matchesSearch && matchesStatus && matchesCategory;
+  return matchesSearch && matchesStatus && matchesCategory; // La tâche doit correspondre à tous les critères pour être incluse dans le tableau final
 });
 
+// Le tableau filteredTasks contient maintenant uniquement les tâches qui correspondent à la recherche, au filtre d'état et au filtre de catégorie sélectionnés par l'utilisateur. Lorsque l'utilisateur modifie le texte de recherche ou change les filtres, le composant se re-render automatiquement et affiche uniquement les tâches qui répondent aux nouveaux critères.
 
+  // Le reste du code pour afficher les tâches, le formulaire, etc.
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-10 font-sans">
       <div className="max-w-2xl mx-auto bg-white shadow-xl rounded-2xl p-6">
@@ -81,11 +83,11 @@ const filteredTasks = tasks.filter(task => {
             type="text"
             value={formData.text}
             onChange={(e) => setFormData({...formData, text: e.target.value})}
-            placeholder="Quelle est la mission ?"
+            placeholder="Ampidiro taches tianao ?"
             className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none transition-all"
           />
           
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4"> 
             {/* Sélecteur de Catégorie */}
             <select 
               value={formData.category}
@@ -166,7 +168,9 @@ const filteredTasks = tasks.filter(task => {
           <input 
             type="checkbox"
             checked={task.completed}
-            onChange={() => setTasks(tasks.map(t => t.id === task.id ? {...t, completed: !t.completed} : t))}
+            onChange={() => setTasks(tasks.map(t => t.id === task.id ? 
+              {...t, completed: !t.completed} : t)) 
+            } // On utilise la méthode map pour créer un nouveau tableau de tâches où la tâche avec l'ID correspondant a son état "completed" inversé. Les autres tâches restent inchangées.
             className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
           />
           <div>
@@ -186,13 +190,13 @@ const filteredTasks = tasks.filter(task => {
             </div>
           </div>
         </div>
-
+      
         <button 
           onClick={() => setTasks(tasks.filter(t => t.id !== task.id))}
           className="p-2 text-gray-400 hover:text-red-500 transition-colors"
         >
           🗑️
-        </button>
+        </button>  {/* Le bouton de suppression utilise la méthode filter pour créer un nouveau tableau de tâches qui exclut la tâche avec l'ID correspondant. Lorsque l'utilisateur clique sur le bouton, la fonction setTasks est appelée avec ce nouveau tableau, ce qui met à jour l'état et ré-render le composant pour refléter la suppression de la tâche. */}
       </div>
     ))
   )}
