@@ -7,12 +7,12 @@ Une application moderne de gestion de tâches (To-Do List) construite avec **Rea
 ## Fonctionnalités
 
 - **Ajout de tâches** : Créez des tâches avec un texte descriptif, une catégorie et un niveau de priorité.
-- **Catégories** : Travail 💼, Personnel 🏠, Études 🎓
-- **Priorités** : Basse 🟢, Moyenne 🟡, Haute 🔴
+- **Catégories** : Travail (Briefcase), Personnel (Home), Études (GraduationCap)
+- **Priorités** : Basse (cercle vert), Moyenne (cercle orange), Haute (cercle rouge)
 - **Persistance des données** : Vos tâches sont automatiquement sauvegardées dans le `localStorage` du navigateur.
 - **Recherche en temps réel** : Trouvez rapidement une tâche grâce à la barre de recherche.
 - **Filtres combinés** :
-  - Par état : Toutes, En cours ⏳, Terminées ✅
+  - Par état : Toutes, En cours (Clock), Terminées (CheckCircle2)
   - Par catégorie : Toutes les catégories, Travail, Personnel, Études
 - **Gestion de l'état** : Cochez une tâche pour la marquer comme terminée.
 - **Suppression** : Supprimez une tâche en un clic.
@@ -28,6 +28,7 @@ Une application moderne de gestion de tâches (To-Do List) construite avec **Rea
 | React DOM | ^19.2.4 | Rendu DOM |
 | Vite | ^8.0.4 | Bundler & serveur de développement |
 | Tailwind CSS | ^4.2.2 | Framework CSS utilitaire |
+| Lucide React | ^latest | Bibliothèque d'icônes vectorielles |
 | ESLint | ^9.39.4 | Linter JavaScript |
 
 ---
@@ -75,7 +76,7 @@ Une application moderne de gestion de tâches (To-Do List) construite avec **Rea
 
 3. **Gérer vos tâches** :
    - Cochez la case pour marquer une tâche comme terminée.
-   - Cliquez sur l'icône 🗑️ pour supprimer une tâche.
+   - Cliquez sur l'icône Trash2 (Lucide React) pour supprimer une tâche.
 
 > **Note** : Toutes vos tâches sont sauvegardées automatiquement dans votre navigateur (`localStorage`).
 

@@ -1,75 +1,244 @@
 import './index.css'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+// ============================================================================
+// IMPORTATION DES ICÔNES LUCIDE REACT
+// ============================================================================
+// On remplace tous les emojis natifs par des icônes vectorielles Lucide.
+// Avantages par rapport aux emojis :
+// - Rendu cohérent sur tous les OS (Windows, macOS, Linux, Android, iOS)
+// - Personnalisation facile (taille, couleur, stroke) via les props
+// - Pas de dépendance aux polices système emoji
+// - Style plus professionnel et uniforme
+// ============================================================================
+import {
+  Briefcase,
+  Home,
+  GraduationCap,
+  Circle,
+  Clock,
+  CheckCircle2,
+  Trash2,
+  ChevronDown,
+} from 'lucide-react'
+
+// ============================================================================
+// MAPPING : VALEUR → ICÔNE LUCIDE
+// ============================================================================
+// Ces objets permettent d'associer une valeur sémantique (ex: 'Travail')
+// à son icône Lucide correspondante. On les utilise à la fois dans les
+// dropdowns personnalisés et dans les badges des tâches affichées.
+// ============================================================================
+
+/** Icônes associées à chaque catégorie de tâche */
+const CATEGORY_ICONS = {
+  Travail: <Briefcase size={14} className="shrink-0" />,
+  Personnel: <Home size={14} className="shrink-0" />,
+  Études: <GraduationCap size={14} className="shrink-0" />,
+}
+
+/** Icônes associées à chaque niveau de priorité (cercles colorés) */
+const PRIORITY_ICONS = {
+  Basse: <Circle fill="#22c55e" color="#22c55e" size={14} className="shrink-0" />,    // vert-500
+  Moyenne: <Circle fill="#f97316" color="#FFFF00" size={14} className="shrink-0" />, // jaune-500
+  Haute: <Circle fill="#ef4444" color="#ef4444" size={14} className="shrink-0" />,   // red-500
+}
+
+/** Icônes associées à chaque filtre d'état de tâche */
+const STATUS_ICONS = {
+  'En cours': <Clock size={14} className="shrink-0" />,
+  'Terminées': <CheckCircle2 size={14} className="shrink-0" />,
+}
+
+// ============================================================================
+// COMPOSANT CUSTOMSELECT (DROPDOWN PERSONNALISÉ)
+// ============================================================================
+// POURQUOI NE PAS UTILISER UN <select> NATIF ?
+// ---------------------------------------------
+// Les éléments <option> d'un <select> HTML natif ne supportent QUE du texte
+// brut. Il est techniquement impossible d'y injecter du JSX (composants React,
+// icônes SVG, etc.). Seuls les emojis (caractères Unicode) fonctionnent.
+//
+// SOLUTION : On construit un dropdown entièrement personnalisé avec des <div>
+// et Tailwind CSS. Cela permet :
+// - d'afficher des icônes Lucide React à côté des labels
+// - d'avoir un style visuel 100 % contrôlé et cohérent avec le reste de l'UI
+// - de gérer programmatiquement l'ouverture/fermeture et la sélection
+//
+// ACCESSIBILITÉ : On ajoute role="listbox", aria-expanded, aria-selected et
+// un tabindex pour maintenir une bonne accessibilité au clavier.
+// ============================================================================
+function CustomSelect({ value, onChange, options, placeholder, className = '' }) {
+  // État local : le menu déroulant est-il ouvert ?
+  const [isOpen, setIsOpen] = useState(false)
+  // Référence vers le conteneur DOM pour détecter les clics à l'extérieur
+  const containerRef = useRef(null)
+
+  // Trouve l'option actuellement sélectionnée pour afficher son label + icône
+  const selectedOption = options.find((opt) => opt.value === value)
+
+  // Ferme le dropdown si l'utilisateur clique en dehors du composant
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    // On écoute les clics sur tout le document, mais seulement quand le menu est ouvert
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      {/* BOUTON DÉCLENCHEUR (affichage de la valeur sélectionnée) */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors text-left"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span className="flex items-center gap-2 truncate">
+          {selectedOption ? (
+            <>
+              {selectedOption.icon}
+              <span>{selectedOption.label}</span>
+            </>
+          ) : (
+            <span className="text-gray-400">{placeholder}</span>
+          )}
+        </span>
+        <ChevronDown
+          size={14}
+          className={`text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* LISTE DÉROULANTE DES OPTIONS */}
+      {isOpen && (
+        <ul
+          role="listbox"
+          className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
+        >
+          {options.map((option) => (
+            <li
+              key={option.value}
+              role="option"
+              aria-selected={option.value === value}
+              onClick={() => {
+                onChange(option.value)
+                setIsOpen(false)
+              }}
+              className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${
+                option.value === value
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'hover:bg-gray-50 text-gray-700'
+              }`}
+            >
+              {option.icon}
+              <span className="text-sm">{option.label}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
 
 
 function App() {
-  // 1. État pour la liste des tâches
-  const [tasks, setTasks] = useState(() => { 
-    const savedTasks = localStorage.getItem('taskflow_v1'); 
-    return savedTasks ? JSON.parse(savedTasks) : []; 
-  });
+  // ==========================================================================
+  // ÉTATS DE L'APPLICATION
+  // ==========================================================================
 
-  // 2. État pour le formulaire (on regroupe tout ici) initialisé avec des valeurs par défaut
+  // 1. État pour la liste des tâches (récupération depuis localStorage)
+  const [tasks, setTasks] = useState(() => {
+    const savedTasks = localStorage.getItem('taskflow_v1')
+    return savedTasks ? JSON.parse(savedTasks) : []
+  })
+
+  // 2. État pour le formulaire d'ajout de tâche
   const [formData, setFormData] = useState({
     text: '',
     category: 'Personnel',
-    priority: 'Moyenne'
-  });
+    priority: 'Moyenne',
+  })
 
+  // 3. États pour la recherche et les filtres
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('Toutes')
+  const [categoryFilter, setCategoryFilter] = useState('Toutes')
 
-// .mi sauvegarder automatiquement dès que la liste 'tasks' change
-useEffect(() => {
-  // On transforme le tableau JS en chaîne de caractères JSON pour le stockage
-  localStorage.setItem('taskflow_v1', JSON.stringify(tasks));
-}, [tasks]); // S'exécute à chaque fois que 'tasks' est modifié
+  // ==========================================================================
+  // EFFET : PERSISTANCE LOCALSTORAGE
+  // ==========================================================================
+  useEffect(() => {
+    localStorage.setItem('taskflow_v1', JSON.stringify(tasks))
+  }, [tasks])
 
-
-  // Fonction pour ajouter une tâche
+  // ==========================================================================
+  // FONCTION : AJOUTER UNE TÂCHE
+  // ==========================================================================
   const addTask = (e) => {
-    e.preventDefault(); // Empêche le rechargement de la page
-    if (!formData.text.trim()) return;  // Ne pas ajouter de tâche vide
+    e.preventDefault()
+    if (!formData.text.trim()) return // Empêche l'ajout de tâches vides
 
     const newTask = {
       id: Date.now(),
-      ...formData, // On utilise la syntaxe de décomposition pour inclure tous les champs du formulaire
-      completed: false // Par défaut, une nouvelle tâche n'est pas terminée
-    };
+      ...formData,
+      completed: false,
+    }
+    setTasks([...tasks, newTask])
+    setFormData({ ...formData, text: '' }) // Réinitialise seulement le texte
+  }
 
-    setTasks([...tasks, newTask]);
-    
-    // Réinitialise seulement le texte après l'ajout
-    setFormData({ ...formData, text: '' });
-  };
+  // ==========================================================================
+  // FILTRAGE DES TÂCHES (recherche + état + catégorie)
+  // ==========================================================================
+  const filteredTasks = tasks.filter((task) => {
+    const matchesSearch = task.text.toLowerCase().includes(search.toLowerCase())
+    const matchesStatus =
+      filter === 'Toutes'
+        ? true
+        : filter === 'Terminées'
+        ? task.completed
+        : !task.completed
+    const matchesCategory =
+      categoryFilter === 'Toutes' ? true : task.category === categoryFilter
+    return matchesSearch && matchesStatus && matchesCategory
+  })
 
-  //resaka recherche et filtres
-  const [search, setSearch] = useState(''); // Texte de recherche saisi par l'utilisateur
-const [filter, setFilter] = useState('Toutes'); // 'Toutes', 'En cours', 'Terminées'
-const [categoryFilter, setCategoryFilter] = useState('Toutes'); // 'Toutes', 'Travail', 'Personnel', 'Études'
+  // ==========================================================================
+  // OPTIONS DES DROPDOWNS (définies ici pour être réutilisables)
+  // ==========================================================================
+  const categoryOptions = [
+    { value: 'Travail', label: 'Travail', icon: CATEGORY_ICONS['Travail'] },
+    { value: 'Personnel', label: 'Personnel', icon: CATEGORY_ICONS['Personnel'] },
+    { value: 'Études', label: 'Études', icon: CATEGORY_ICONS['Études'] },
+  ]
 
-// On applique les filtres et la recherche avant d'afficher les tâches
-// On vérifie pour chaque tâche si elle correspond à la recherche, au filtre d'état et au filtre de catégorie
-// Si le filtre est "Toutes", on accepte toutes les tâches, sinon on compare avec l'état ou la catégorie de la tâche
-// On utilise toLowerCase() pour rendre la recherche insensible à la casse
-// Le résultat est un tableau de tâches qui correspondent à tous les critères sélectionnés
-// Par exemple, si l'utilisateur a saisi "projet" dans la recherche, sélectionné "En cours" dans le filtre d'état et "Travail" dans le filtre de catégorie, alors seules les tâches qui contiennent "projet" dans leur texte, qui ne sont pas terminées et qui appartiennent à la catégorie "Travail" seront affichées.
-// Cela permet à l'utilisateur de trouver rapidement une tâche spécifique parmi une longue liste en combinant plusieurs critères de filtrage.
-// On utilise la méthode filter() pour créer un nouveau tableau qui ne contient que les tâches qui passent les conditions définies dans la fonction de rappel. Chaque condition vérifie si la tâche correspond à la recherche, au filtre d'état et au filtre de catégorie. Si une tâche ne correspond pas à l'un des critères, elle sera exclue du tableau final affiché à l'utilisateur.
-//Comme ton interface utilise filteredTasks.map, elle se met à jour instantanément pour n'afficher que les tâches qui correspondent.
+  const priorityOptions = [
+    { value: 'Basse', label: 'Basse', icon: PRIORITY_ICONS['Basse'] },
+    { value: 'Moyenne', label: 'Moyenne', icon: PRIORITY_ICONS['Moyenne'] },
+    { value: 'Haute', label: 'Haute', icon: PRIORITY_ICONS['Haute'] },
+  ]
 
-const filteredTasks = tasks.filter(task => {
-  const matchesSearch = task.text.toLowerCase().includes(search.toLowerCase()); // Vérifie si le texte de la tâche contient le texte de recherche (insensible à la casse)
-  const matchesStatus = 
-    filter === 'Toutes' ? true : 
-    filter === 'Terminées' ? task.completed : !task.completed; // Vérifie si la tâche correspond au filtre d'état
-  const matchesCategory = 
-    categoryFilter === 'Toutes' ? true : task.category === categoryFilter; // Vérifie si la tâche correspond au filtre de catégorie
+  const statusFilterOptions = [
+    { value: 'Toutes', label: 'Tous les états', icon: null },
+    { value: 'En cours', label: 'En cours', icon: STATUS_ICONS['En cours'] },
+    { value: 'Terminées', label: 'Terminées', icon: STATUS_ICONS['Terminées'] },
+  ]
 
-  return matchesSearch && matchesStatus && matchesCategory; // La tâche doit correspondre à tous les critères pour être incluse dans le tableau final
-});
+  const categoryFilterOptions = [
+    { value: 'Toutes', label: 'Toutes les catégories', icon: null },
+    ...categoryOptions,
+  ]
 
-// Le tableau filteredTasks contient maintenant uniquement les tâches qui correspondent à la recherche, au filtre d'état et au filtre de catégorie sélectionnés par l'utilisateur. Lorsque l'utilisateur modifie le texte de recherche ou change les filtres, le composant se re-render automatiquement et affiche uniquement les tâches qui répondent aux nouveaux critères.
-
-  // Le reste du code pour afficher les tâches, le formulaire, etc.
+  // ==========================================================================
+  // RENDU JSX
+  // ==========================================================================
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-10 font-sans">
       <div className="max-w-2xl mx-auto bg-white shadow-xl rounded-2xl p-6">
@@ -77,134 +246,173 @@ const filteredTasks = tasks.filter(task => {
           TaskFlow <span className="text-blue-600">tena izy</span>
         </h1>
 
-        {/* Formulaire d'ajout */}
+        {/* ================================================================== */}
+        {/* FORMULAIRE D'AJOUT DE TÂCHE                                      */}
+        {/* ================================================================== */}
         <form onSubmit={addTask} className="space-y-4 mb-10">
-          <input 
+          <input
             type="text"
             value={formData.text}
-            onChange={(e) => setFormData({...formData, text: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, text: e.target.value })}
             placeholder="Ampidiro taches tianao ?"
             className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none transition-all"
           />
-          
-          <div className="flex flex-wrap gap-4"> 
-            {/* Sélecteur de Catégorie */}
-            <select 
+
+          <div className="flex flex-wrap gap-4">
+            {/* ------------------------------------------------------------- */}
+            {/* SÉLECTEUR DE CATÉGORIE (CustomSelect remplace <select> natif) */}
+            {/* On passe les options avec leurs icônes Lucide associées.      */}
+            {/* ------------------------------------------------------------- */}
+            <CustomSelect
               value={formData.category}
-              onChange={(e) => setFormData({...formData, category: e.target.value})}
-              className="p-2 bg-gray-50 border border-gray-200 rounded-lg flex-1"
-            >
-              <option value="Travail">💼 Travail</option>
-              <option value="Personnel">🏠 Personnel</option>
-              <option value="Études">🎓 Études</option>
-            </select>
+              onChange={(val) => setFormData({ ...formData, category: val })}
+              options={categoryOptions}
+              className="flex-1 min-w-[140px]"
+            />
 
-            {/* Sélecteur de Priorité */}
-            <select 
+            {/* ------------------------------------------------------------- */}
+            {/* SÉLECTEUR DE PRIORITÉ (CustomSelect remplace <select> natif)  */}
+            {/* Les cercles colorés Lucide remplacent les emojis ronds.       */}
+            {/* ------------------------------------------------------------- */}
+            <CustomSelect
               value={formData.priority}
-              onChange={(e) => setFormData({...formData, priority: e.target.value})}
-              className="p-2 bg-gray-50 border border-gray-200 rounded-lg flex-1"
-            >
-              <option value="Basse">🟢 Basse</option>
-              <option value="Moyenne">🟡 Moyenne</option>
-              <option value="Haute">🔴 Haute</option>
-            </select>
+              onChange={(val) => setFormData({ ...formData, priority: val })}
+              options={priorityOptions}
+              className="flex-1 min-w-[140px]"
+            />
 
-            <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors w-full md:w-auto">
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors w-full md:w-auto"
+            >
               Ajouter
             </button>
           </div>
         </form>
 
+        {/* ================================================================== */}
+        {/* BARRE DE RECHERCHE + FILTRES                                     */}
+        {/* ================================================================== */}
         <div className="mb-6 space-y-4">
-  {/* Barre de recherche */}
-  <input 
-    type="text"
-    placeholder="Rechercher une tâche..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-    className="w-full p-1 border-b-2 border-gray-100 focus:border-blue-400 outline-none transition-all"
-  />
-
-  <div className="flex flex-wrap gap-2 text-sm">
-    {/* Filtre d'état */}
-    <select 
-      value={filter} 
-      onChange={(e) => setFilter(e.target.value)}
-      className="bg-gray-50 px-3 py-1 rounded-full border border-gray-200 outline-none"
-    >
-      <option value="Toutes">Tous les états</option>
-      <option value="En cours">⏳ En cours</option>
-      <option value="Terminées">✅ Terminées</option>
-    </select>
-
-    {/* Filtre de catégorie */}
-    <select 
-      value={categoryFilter} 
-      onChange={(e) => setCategoryFilter(e.target.value)}
-      className="bg-gray-50 px-3 py-1 rounded-full border border-gray-200 outline-none"
-    >
-      <option value="Toutes">Toutes les catégories</option>
-      <option value="Travail">💼 Travail</option>
-      <option value="Personnel">🏠 Personnel</option>
-      <option value="Études">🎓 Études</option>
-    </select>
-  </div>
-</div>
-
-
-        <div className="space-y-3">
-  {tasks.length === 0 ? (
-    <p className="text-center text-gray-400 py-10">Aucune tâche pour le moment...</p>
-  ) : (
-    filteredTasks.map(task => (
-      <div 
-        key={task.id} 
-        className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
-          task.completed ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-100 shadow-sm'
-        }`}
-      >
-        <div className="flex items-center gap-4">
-          <input 
-            type="checkbox"
-            checked={task.completed}
-            onChange={() => setTasks(tasks.map(t => t.id === task.id ? 
-              {...t, completed: !t.completed} : t)) 
-            } // On utilise la méthode map pour créer un nouveau tableau de tâches où la tâche avec l'ID correspondant a son état "completed" inversé. Les autres tâches restent inchangées.
-            className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
+          <input
+            type="text"
+            placeholder="Rechercher une tâche..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full p-1 border-b-2 border-gray-100 focus:border-blue-400 outline-none transition-all"
           />
-          <div>
-            <p className={`font-semibold ${task.completed ? 'line-through text-gray-500' : 'text-gray-800'}`}>
-              {task.text}
-            </p>
-            <div className="flex gap-2 mt-1">
-              <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
-                {task.category}
-              </span>
-              <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${
-                task.priority === 'Haute' ? 'bg-red-50 text-red-600' : 
-                task.priority === 'Moyenne' ? 'bg-orange-50 text-orange-300' : 'bg-green-50 text-green-600'
-              }`}>
-                {task.priority}
-              </span>
-            </div>
+
+          <div className="flex flex-wrap gap-2 text-sm">
+            {/* Filtre d'état avec CustomSelect */}
+            <CustomSelect
+              value={filter}
+              onChange={setFilter}
+              options={statusFilterOptions}
+              placeholder="Tous les états"
+              className="min-w-[160px]"
+            />
+            {/* Filtre de catégorie avec CustomSelect */}
+            <CustomSelect
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={categoryFilterOptions}
+              placeholder="Toutes les catégories"
+              className="min-w-[180px]"
+            />
           </div>
         </div>
-      
-        <button 
-          onClick={() => setTasks(tasks.filter(t => t.id !== task.id))}
-          className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-        >
-          🗑️
-        </button>  {/* Le bouton de suppression utilise la méthode filter pour créer un nouveau tableau de tâches qui exclut la tâche avec l'ID correspondant. Lorsque l'utilisateur clique sur le bouton, la fonction setTasks est appelée avec ce nouveau tableau, ce qui met à jour l'état et ré-render le composant pour refléter la suppression de la tâche. */}
-      </div>
-    ))
-  )}
-</div>
 
+        {/* ================================================================== */}
+        {/* LISTE DES TÂCHES                                                 */}
+        {/* ================================================================== */}
+        <div className="space-y-3">
+          {tasks.length === 0 ? (
+            <p className="text-center text-gray-400 py-10">
+              Aucune tâche pour le moment...
+            </p>
+          ) : (
+            filteredTasks.map((task) => (
+              <div
+                key={task.id}
+                className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                  task.completed
+                    ? 'bg-gray-50 border-gray-200 opacity-60'
+                    : 'bg-white border-gray-100 shadow-sm'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <input
+                    type="checkbox"
+                    checked={task.completed}
+                    onChange={() =>
+                      setTasks(
+                        tasks.map((t) =>
+                          t.id === task.id
+                            ? { ...t, completed: !t.completed }
+                            : t
+                        )
+                      )
+                    }
+                    className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <div>
+                    <p
+                      className={`font-semibold ${
+                        task.completed
+                          ? 'line-through text-gray-500'
+                          : 'text-gray-800'
+                      }`}
+                    >
+                      {task.text}
+                    </p>
+                    {/* ===================================================== */}
+                    {/* BADGES CATÉGORIE + PRIORITÉ avec icônes Lucide        */}
+                    {/* Les icônes sont récupérées via les objets de mapping   */}
+                    {/* CATEGORY_ICONS et PRIORITY_ICONS définis plus haut.   */}
+                    {/* ===================================================== */}
+                    <div className="flex gap-2 mt-1 items-center">
+                      <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
+                        {CATEGORY_ICONS[task.category]}
+                        {task.category}
+                      </span>
+                      <span
+                        className={`flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${
+                          task.priority === 'Haute'
+                            ? 'bg-red-50 text-red-600'
+                            : task.priority === 'Moyenne'
+                            ? 'bg-yellow-50 text-yellow-500'
+                            : 'bg-green-50 text-green-600'
+                        }`}
+                      >
+                        {PRIORITY_ICONS[task.priority]}
+                        {task.priority}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ========================================================= */}
+                {/* BOUTON SUPPRIMER avec icône Lucide <Trash2 />            */}
+                {/* L'icône vectorielle remplace l'emoji 🗑️ pour un rendu    */}
+                {/* propre sur tous les navigateurs et systèmes d'exploitation.*/}
+                {/* ========================================================= */}
+                <button
+                  onClick={() =>
+                    setTasks(tasks.filter((t) => t.id !== task.id))
+                  }
+                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Supprimer la tâche"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
 export default App
+

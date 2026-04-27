@@ -40,6 +40,7 @@ Cette commande installe toutes les dépendances listées dans le `package.json`,
 - Vite
 - Tailwind CSS
 - ESLint
+- **Lucide React** (icônes vectorielles remplaçant les emojis natifs)
 
 ### 3. Lancer le serveur de développement
 
@@ -114,6 +115,7 @@ taskflow/
 
 - L'application utilise le `localStorage` du navigateur pour sauvegarder les tâches. Aucune base de données externe n'est requise.
 - Le projet est configuré avec **Tailwind CSS v4** et utilise le plugin `@tailwindcss/vite`.
+- **Remplacement des emojis par Lucide React** : Les émojis natifs (💼, 🏠, 🎓, 🟢, 🟡, 🔴, ⏳, ✅, 🗑️) ont été remplacés par des icônes vectorielles Lucide pour un rendu cohérent sur tous les OS. Les `<select>` natifs ont été remplacés par un composant `CustomSelect` personnalisé car les `<option>` HTML ne supportent pas les composants React.
 
 ---
 
